@@ -4,10 +4,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.ghgande</groupId>
+    <groupId>io.openems</groupId>
     <artifactId>j2mod</artifactId>
     <name>j2mod</name>
-    <url>https://github.com/steveohara/j2mod</url>
+    <url>https://github.com/OpenEMS/j2mod</url>
     <version>3.2.2-SNAPSHOT</version>
     <description>A Modbus TCP/UDP/Serial Master and Slave implementation</description>
 
@@ -69,8 +69,8 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:https://github.com/steveohara/j2mod.git</connection>
-        <url>https://github.com/steveohara/j2mod</url>
+        <connection>scm:git:https://github.com/OpenEMS/j2mod.git</connection>
+        <url>https://github.com/OpenEMS/j2mod</url>
     </scm>
 
     <dependencies>
@@ -250,14 +250,12 @@
             </plugin>
 
             <plugin>
-                <groupId>org.sonatype.plugins</groupId>
-                <artifactId>nexus-staging-maven-plugin</artifactId>
-                <version>1.6.3</version>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version>
                 <extensions>true</extensions>
                 <configuration>
-                    <serverId>ossrh</serverId>
-                    <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                    <autoReleaseAfterClose>true</autoReleaseAfterClose>
+                    <publishingServerId>central</publishingServerId>
                 </configuration>
             </plugin>
 
@@ -273,16 +271,4 @@
             </resource>
         </resources>
     </build>
-
-    <distributionManagement>
-        <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-        </snapshotRepository>
-        <repository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-    </distributionManagement>
-
 </project>
