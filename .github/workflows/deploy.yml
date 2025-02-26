@@ -21,6 +21,12 @@ jobs:
           gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
 
+      - name: Install socat
+        run: sudo apt-get update && sudo apt-get install -y socat
+
+      - name: Create Virtual Serial Ports
+        run: socat -d -d pty,link=/dev/ttys001,raw,echo=0 pty,link=/dev/ttys002,raw,echo=0
+
       - name: Publish to Apache Maven Central
         run: mvn deploy
         env:
