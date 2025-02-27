@@ -28,6 +28,8 @@ jobs:
         run: |
           nohup sudo socat -d -d pty,link=/dev/ttys001,raw,echo=0 pty,link=/dev/ttys002,raw,echo=0 > socat.log 2>&1 &
           echo $! > socat.pid
+          sleep 3
+          cat socat.log
           sudo chmod 666 /dev/ttys001 /dev/ttys002
 
       - name: Publish to Apache Maven Central
