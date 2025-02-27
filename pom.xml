@@ -240,7 +240,9 @@
                             <goal>sign</goal>
                         </goals>
                         <configuration>
+                            <useAgent>false</useAgent>
                             <gpgArguments>
+                                <arg>--batch</arg>
                                 <arg>--pinentry-mode</arg>
                                 <arg>loopback</arg>
                             </gpgArguments>
