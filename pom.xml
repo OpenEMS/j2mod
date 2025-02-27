@@ -241,6 +241,7 @@
                         </goals>
                         <configuration>
                             <useAgent>false</useAgent>
+                            <passphraseServerId>gpg.passphrase</passphraseServerId>
                             <gpgArguments>
                                 <arg>--batch</arg>
                                 <arg>--pinentry-mode</arg>
