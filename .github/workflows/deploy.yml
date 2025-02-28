@@ -1,0 +1,40 @@
+name: Maven Deploy
+
+on: workflow_dispatch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '8'
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.MAVEN_GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      - name: Install socat
+        run: sudo apt-get update && sudo apt-get install -y socat
+
+      - name: Create Virtual Serial Ports
+        run: |
+          nohup sudo socat -d -d pty,link=/dev/ttys001,raw,echo=0 pty,link=/dev/ttys002,raw,echo=0 > socat.log 2>&1 &
+          echo $! > socat.pid
+          sleep 3
+          cat socat.log
+          sudo chmod 666 /dev/ttys001 /dev/ttys002
+
+      - name: Publish to Apache Maven Central
+        run: mvn --batch-mode deploy
+        env:
+          MAVEN_USERNAME: RKXN40qW
+          MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.MAVEN_GPG_PASSPHRASE }}
