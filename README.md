@@ -10,11 +10,11 @@ For instructions on how to use the library, visit the wiki [here](https://github
 # Releases
 Stable releases can be downloaded here 
 
-https://mvnrepository.com/artifact/com.ghgande/j2mod
+[https://mvnrepository.com/artifact/io.openems/j2mod](https://mvnrepository.com/artifact/io.openems/j2mod)
 
 Snapshot releases can be downloaded here 
 
-https://oss.sonatype.org/content/repositories/snapshots/com/ghgande/j2mod/
+[https://oss.sonatype.org/content/repositories/snapshots/io/openems/j2mod/](https://central.sonatype.com/service/rest/repository/browse/maven-snapshots/io/openems/j2mod/)
 
 # Known Issues
 
@@ -33,7 +33,7 @@ Logging facade to fit in with your application logging framework
 # Including j2mod
 
     <dependency>
-        <groupId>com.ghgande</groupId>
+        <groupId>io.openems</groupId>
         <artifactId>j2mod</artifactId>
         <version>LATEST</version>
     </dependency>
