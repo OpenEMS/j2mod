@@ -8,7 +8,7 @@
     <artifactId>j2mod</artifactId>
     <name>j2mod</name>
     <url>https://github.com/OpenEMS/j2mod</url>
-    <version>3.2.1-openems.1</version>
+    <version>3.2.2-openems.1</version>
     <description>A Modbus TCP/UDP/Serial Master and Slave implementation</description>
 
     <packaging>bundle</packaging>
