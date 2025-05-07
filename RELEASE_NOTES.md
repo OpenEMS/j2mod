@@ -255,3 +255,7 @@ _(**NOT BACKWARDS COMPATIBLE**)_
 ## Version 3.2.2
 * Add support for providing an optional java.net proxy for. (#151)
 * Added support for testing serial comms on Mac/Linux
+
+## Version 3.2.2-openems.1
+* Add Deploy Workflow
+* Forward 'disablePortConfiguration'-setting from jSerialComm
