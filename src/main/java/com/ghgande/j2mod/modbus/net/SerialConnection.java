@@ -167,7 +167,7 @@ public class SerialConnection extends AbstractSerialConnection {
 
         // Set connection parameters, if set fails return parameters object to original state
         if (serialPort != null) {
-            if (disablePortConfiguration) {
+            if (this.disablePortConfiguration) {
                 serialPort.disablePortConfiguration();
             }
             serialPort.setComPortParameters(parameters.getBaudRate(), parameters.getDatabits(), parameters.getStopbits(), parameters.getParity());
