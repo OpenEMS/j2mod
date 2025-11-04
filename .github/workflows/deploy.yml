@@ -33,7 +33,7 @@ jobs:
           sudo chmod 666 /dev/ttys001 /dev/ttys002
 
       - name: Publish to Apache Maven Central
-        run: mvn --batch-mode deploy
+        run: ./mvnw --batch-mode deploy
         env:
           MAVEN_USERNAME: RKXN40qW
           MAVEN_CENTRAL_TOKEN: ${{ secrets.MAVEN_CENTRAL_TOKEN }}
