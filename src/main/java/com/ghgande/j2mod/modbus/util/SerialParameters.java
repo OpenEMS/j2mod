@@ -395,6 +395,9 @@ public class SerialParameters {
         }
     }
 
+    /**
+     * Disables RS-485 control signals management.
+     */
     public void disableRs485Control() {
         this.rs485DisableControl = true;
     }
