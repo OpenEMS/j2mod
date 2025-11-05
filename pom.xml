@@ -8,13 +8,16 @@
     <artifactId>j2mod</artifactId>
     <name>j2mod</name>
     <url>https://github.com/OpenEMS/j2mod</url>
-    <version>3.2.2-openems.2-SNAPSHOT</version>
-    <description>A Modbus TCP/UDP/Serial Master and Slave implementation</description>
+    <version>3.2.3-SNAPSHOT</version>
+    <description>OpenEMS fork of j2mod — Modbus TCP/UDP/Serial master and slave implementation.</description>
 
     <packaging>bundle</packaging>
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <forked.project>j2mod</forked.project>
+        <forked.version>3.2.1</forked.version>
+        <forked.url>https://github.com/steveohara/j2mod</forked.url>
     </properties>
 
     <developers>
@@ -138,6 +141,8 @@
                             <Implementation-Title>${project.name}</Implementation-Title>
                             <Implementation-Version>${project.version}</Implementation-Version>
                             <Implemenation-Vendor>${project.organization.name}</Implemenation-Vendor>
+                            <Forked-From>${forked.project} ${forked.version}</Forked-From>
+                            <Original-URL>${forked.url}</Original-URL>
                             <Main-Class>com.ghgande.j2mod.modbus.util.ModPoll</Main-Class>
                         </manifestEntries>
                     </archive>
