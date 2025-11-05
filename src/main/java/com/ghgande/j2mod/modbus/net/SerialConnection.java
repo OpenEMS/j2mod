@@ -53,7 +53,6 @@ public class SerialConnection extends AbstractSerialConnection {
     private SerialPort serialPort;
     private InputStream inputStream;
     private int timeout = Modbus.DEFAULT_TIMEOUT;
-    private boolean disablePortConfiguration = false;
 
     /**
      * Default constructor
@@ -167,8 +166,8 @@ public class SerialConnection extends AbstractSerialConnection {
 
         // Set connection parameters, if set fails return parameters object to original state
         if (serialPort != null) {
-            if (disablePortConfiguration) {
-                serialPort.disablePortConfiguration();
+            if (parameters.isRs485ControlDisabled()) {
+                serialPort.disableRs485ModeControl();
             }
             serialPort.setComPortParameters(parameters.getBaudRate(), parameters.getDatabits(), parameters.getStopbits(), parameters.getParity());
             serialPort.setFlowControl(parameters.getFlowControlIn() | parameters.getFlowControlOut());
@@ -277,20 +276,5 @@ public class SerialConnection extends AbstractSerialConnection {
             }
         }
         return returnValue;
-    }
-
-    /**
-     * Disables the library from calling any of the underlying device driver
-     * configuration methods.
-     *
-     * <p>
-     * This function should never be called except in very specific cases involving
-     * USB-to-Serial converters with buggy device drivers.
-     * </p>
-     *
-     * @see SerialPort#disablePortConfiguration()
-     */
-    public void disablePortConfiguration() {
-        disablePortConfiguration = true;
     }
 }
