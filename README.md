@@ -10,6 +10,7 @@ For instructions on how to use the library, visit the wiki [here](https://github
 # Releases
 Stable releases can be downloaded here 
 
+[https://central.sonatype.com/artifact/io.openems/j2mod](https://central.sonatype.com/artifact/io.openems/j2mod)
 [https://mvnrepository.com/artifact/io.openems/j2mod](https://mvnrepository.com/artifact/io.openems/j2mod)
 
 Snapshot releases can be downloaded here 
