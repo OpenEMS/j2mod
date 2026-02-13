@@ -16,7 +16,6 @@
 package com.ghgande.j2mod.modbus.cmd;
 
 import com.ghgande.j2mod.modbus.Modbus;
-import com.ghgande.j2mod.modbus.procimg.Record;
 import com.ghgande.j2mod.modbus.procimg.*;
 import com.ghgande.j2mod.modbus.slave.ModbusSlave;
 import com.ghgande.j2mod.modbus.slave.ModbusSlaveFactory;

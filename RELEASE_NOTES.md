@@ -256,6 +256,8 @@ _(**NOT BACKWARDS COMPATIBLE**)_
 * Add support for providing an optional java.net proxy for. (#151)
 * Added support for testing serial comms on Mac/Linux
 
-## Version 3.2.2-openems.1
-* Add Deploy Workflow
-* Forward 'disablePortConfiguration'-setting from jSerialComm
+## Version 3.2.3
+* Failed to read response! CRC Error in received frame #153 - thanks thomas-hutterer-tik. (#153)
+* Expose disableRs485ModeControl from jSerialComm v2.11.4 thanks da-Kai (#160)
+
+**_Note: - from 3.3.0 onwards, the release notes will be maintained in commit and GitHub releases._**
