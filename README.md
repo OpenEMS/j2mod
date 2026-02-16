@@ -26,7 +26,7 @@ Snapshot releases can be downloaded here
 # Dependencies
 
 * [jSerialComm](http://fazecast.github.io/jSerialComm/)
-The serial comms is handled by JSerialComm that includs native implementations for most platforms.
+The serial comms is handled by JSerialComm that includes native implementations for most platforms.
 * [slf4j](https://www.slf4j.org/)
 Logging facade to fit in with your application logging framework
 * JRE 1.8 (JRE 1.6 for v2.70 and lower)

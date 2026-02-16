@@ -322,6 +322,7 @@ public class TCPMasterConnection {
 
     /**
      * Sets the <tt>Proxy</tt> that this socket uses. If null (the default), no proxy is used.
+     * @param proxy the proxy as <tt>Proxy</tt>.
      */
     public void setProxy(Proxy proxy) {
         if(socket != null && proxy != null) {

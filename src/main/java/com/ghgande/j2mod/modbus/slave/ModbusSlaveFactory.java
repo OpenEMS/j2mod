@@ -197,6 +197,7 @@ public class ModbusSlaveFactory {
     /**
      * Returns the running slave listening on the given port
      *
+     * @param type Type of slave
      * @param port Port to check for running slave
      * @return Null or ModbusSlave
      */
@@ -207,6 +208,7 @@ public class ModbusSlaveFactory {
     /**
      * Returns the running slave listening on the given port
      *
+     * @param type Type of slave
      * @param port Port to check for running slave
      * @return Null or ModbusSlave
      */

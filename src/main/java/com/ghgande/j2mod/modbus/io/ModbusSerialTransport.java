@@ -637,7 +637,8 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             return 1750;
         }
         else {
-            return Math.max(getCharInterval(Modbus.INTER_MESSAGE_GAP), Modbus.MINIMUM_TRANSMIT_DELAY);
+            long delay = Math.max(getCharIntervalMicro(Modbus.INTER_MESSAGE_GAP), Modbus.MINIMUM_TRANSMIT_DELAY * 1000L);
+            return delay > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) delay;
         }
     }
 
@@ -660,17 +661,6 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
      * Used for message timings.
      *
      * @param chars Number of characters
-     * @return char interval in milliseconds
-     */
-    int getCharInterval(double chars) {
-        return (int) (getCharIntervalMicro(chars) / 1000);
-    }
-
-    /**
-     * Calculates an interval based on a set number of characters.
-     * Used for message timings.
-     *
-     * @param chars Number of caracters
      * @return microseconds
      */
     long getCharIntervalMicro(double chars) {

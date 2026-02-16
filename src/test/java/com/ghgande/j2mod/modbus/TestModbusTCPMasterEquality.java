@@ -9,7 +9,6 @@ import org.slf4j.LoggerFactory;
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.*;
 
 /**
  * Testing class for {@link ModbusTCPMaster#equals} &amp; {@link ModbusTCPMaster#hashCode} methods

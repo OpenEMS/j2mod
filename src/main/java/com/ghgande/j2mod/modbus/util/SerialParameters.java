@@ -396,29 +396,6 @@ public class SerialParameters {
     }
 
     /**
-     * Disables RS-485 control signals management.
-     * <p>
-     * <i>Please note that this is only effective on Linux.</i>
-     * <p>
-     * This function forces RS-485 mode to stay untouched,
-     * regardless of the current setting of RS-485 mode.
-     * <p>
-     * This function is necessary for Linux drivers that don't handle TIOCGRS485 properly.
-     */
-    public void disableRs485Control() {
-        this.rs485DisableControl = true;
-    }
-
-    /**
-     * Returns whether RS-485 control signals management is disabled.
-     *
-     * @return true if RS-485 control signals management is disabled.
-     */
-    public boolean isRs485ControlDisabled() {
-        return this.rs485DisableControl;
-    }
-
-    /**
      * Returns the number of data bits as <tt>String</tt>.
      *
      * @return the number of data bits as <tt>String</tt>.
@@ -922,6 +899,29 @@ public class SerialParameters {
      */
     public void setRs485DelayAfterTxMicroseconds(String microseconds) {
         setRs485DelayAfterTxMicroseconds(Integer.parseInt(microseconds));
+    }
+
+    /**
+     * Disables RS-485 control signals management.
+     * <p>
+     * <i>Please note that this is only effective on Linux.</i>
+     * <p>
+     * This function forces RS-485 mode to stay untouched,
+     * regardless of the current setting of RS-485 mode.
+     * <p>
+     * This function is necessary for Linux drivers that don't handle TIOCGRS485 properly.
+     */
+    public void disableRs485Control() {
+        this.rs485DisableControl = true;
+    }
+
+    /**
+     * Returns whether RS-485 control signals management is disabled.
+     *
+     * @return true if RS-485 control signals management is disabled.
+     */
+    public boolean isRs485ControlDisabled() {
+        return this.rs485DisableControl;
     }
 
     @Override
