@@ -135,7 +135,7 @@ public class ModbusSlave {
             listener = tcpListener;
         }
         else {
-            listener = new ModbusSerialListener(serialParams);
+            listener = serialParams.createModbusListener();
         }
 
         listener.setAddress(address);
