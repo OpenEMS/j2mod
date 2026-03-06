@@ -22,6 +22,8 @@ import com.ghgande.j2mod.modbus.msg.ModbusRequest;
 import com.ghgande.j2mod.modbus.msg.ModbusResponse;
 
 import java.util.Random;
+import java.util.function.Function;
+import java.util.function.Supplier;
 
 /**
  * Interface defining a ModbusTransaction.
@@ -43,6 +45,7 @@ public abstract class ModbusTransaction {
     int retries = Modbus.DEFAULT_RETRIES;
     private final Random random = new Random(System.nanoTime());
     static int transactionID = Modbus.DEFAULT_TRANSACTION_ID;
+    Function<Integer, Long> retrySleepTimeCalculatorFunc = (count) -> (Modbus.RETRY_SLEEP_TIME / 2) + (long) (random.nextDouble() * Modbus.RETRY_SLEEP_TIME * count);
 
     /**
      * Returns the <tt>ModbusRequest</tt> instance
@@ -105,6 +108,17 @@ public abstract class ModbusTransaction {
     }
 
     /**
+     * Sets the method used for calculating sleep time between retries.
+     * @param retrySleepTimeCalculatorFunc the argument is the amount of retries, beginning with 1. The return value is the milliseconds to wait.
+     */
+    public void setRetrySleepTimeCalculator(Function<Integer, Long> retrySleepTimeCalculatorFunc) {
+        if (retrySleepTimeCalculatorFunc == null) {
+            throw new IllegalArgumentException("retrySleepTimeCalculatorFunc must not be null");
+        }
+        this.retrySleepTimeCalculatorFunc = retrySleepTimeCalculatorFunc;
+    }
+
+    /**
      * Tests whether the validity of a transaction
      * will be checked.
      * <p>
@@ -151,8 +165,8 @@ public abstract class ModbusTransaction {
      * @param count Retry count
      * @return Random sleep time in milliseconds
      */
-    long getRandomSleepTime(int count) {
-        return (Modbus.RETRY_SLEEP_TIME / 2) + (long) (random.nextDouble() * Modbus.RETRY_SLEEP_TIME * count);
+    protected long getRandomSleepTime(int count) {
+        return this.retrySleepTimeCalculatorFunc.apply(count);
     }
 
     /**
