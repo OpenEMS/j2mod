@@ -16,9 +16,7 @@
 package com.ghgande.j2mod.modbus.util;
 
 import com.ghgande.j2mod.modbus.Modbus;
-import com.ghgande.j2mod.modbus.net.AbstractModbusListener;
 import com.ghgande.j2mod.modbus.net.AbstractSerialConnection;
-import com.ghgande.j2mod.modbus.net.ModbusSerialListener;
 
 import java.util.Arrays;
 import java.util.List;
@@ -924,10 +922,6 @@ public class SerialParameters {
      */
     public boolean isRs485ControlDisabled() {
         return this.rs485DisableControl;
-    }
-
-    public AbstractModbusListener createModbusListener() {
-        return new ModbusSerialListener(this);
     }
 
     @Override
