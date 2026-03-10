@@ -426,6 +426,10 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
         }
     }
 
+    protected int readUid() throws IOException {
+        return readByte();
+    }
+
     /**
      * readResponse - Read the bytes for the response from the slave.
      *
@@ -439,15 +443,18 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
         ModbusResponse response;
         int dlength;
 
+        int uid = -1;
+        int fc = -1;
+
         try {
             do {
                 // 1. read to function code, create request and read function
                 // specific bytes
                 synchronized (byteInputStream) {
-                    int uid = readByte();
+                    uid = readUid();
 
                     if (uid != -1) {
-                        int fc = readByte();
+                        fc = readByte();
                         byteInputOutputStream.reset();
                         byteInputOutputStream.writeByte(uid);
                         byteInputOutputStream.writeByte(fc);
@@ -492,7 +499,7 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
         }
         catch (IOException ex) {
             // FIXME: This printout is wrong when reading response from other slave
-            throw new ModbusIOException("I/O exception - failed to read response for request [%s] - %s", ModbusUtil.toHex(lastRequest), ex.getMessage());
+            throw new ModbusIOException(String.format("I/O exception - failed to read response for request [%s] - uid: %d - fc: %d - %s", ModbusUtil.toHex(lastRequest), uid, fc, ex.getMessage()), ex);
         }
     }
 }
