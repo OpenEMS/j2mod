@@ -426,7 +426,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         if (commPort != null && commPort.isOpen()) {
             int cnt = commPort.readBytes(buffer, bytesToRead);
             if (cnt != bytesToRead) {
-                throw new IOException(String.format("Cannot read from serial port - truncated (expected %d, got %d)", bytesToRead, cnt));
+                throw new IOException(String.format("Cannot read from serial port - truncated (expected %d bytes, got %d bytes)", bytesToRead, cnt));
             }
         }
         else {
