@@ -23,7 +23,6 @@ import com.ghgande.j2mod.modbus.msg.ModbusResponse;
 
 import java.util.Random;
 import java.util.function.Function;
-import java.util.function.Supplier;
 
 /**
  * Interface defining a ModbusTransaction.
@@ -45,7 +44,7 @@ public abstract class ModbusTransaction {
     int retries = Modbus.DEFAULT_RETRIES;
     private final Random random = new Random(System.nanoTime());
     static int transactionID = Modbus.DEFAULT_TRANSACTION_ID;
-    Function<Integer, Long> retrySleepTimeCalculatorFunc = (count) -> (Modbus.RETRY_SLEEP_TIME / 2) + (long) (random.nextDouble() * Modbus.RETRY_SLEEP_TIME * count);
+    private Function<Integer, Long> retrySleepTimeCalculatorFunc = (count) -> (Modbus.RETRY_SLEEP_TIME / 2) + (long) (random.nextDouble() * Modbus.RETRY_SLEEP_TIME * count);
 
     /**
      * Returns the <tt>ModbusRequest</tt> instance
