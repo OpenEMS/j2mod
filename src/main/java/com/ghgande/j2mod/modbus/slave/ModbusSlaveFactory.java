@@ -139,7 +139,12 @@ public class ModbusSlaveFactory {
             return slaves.get(key);
         }
         else {
-            ModbusSlave slave = new ModbusSlave(ModbusSlaveType.UDP, null, ModbusUDPListener::new);
+            ModbusSlave slave = new ModbusSlave(ModbusSlaveType.UDP, null, () -> {
+                ModbusUDPListener listener = new ModbusUDPListener();
+                listener.setAddress(address);
+                listener.setPort(port);
+                return listener;
+            });
             slaves.put(key, slave);
             return slave;
         }
