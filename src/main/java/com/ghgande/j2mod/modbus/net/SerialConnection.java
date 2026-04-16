@@ -103,22 +103,7 @@ public class SerialConnection extends AbstractSerialConnection {
 	    applyConnectionParameters();
 	
 	    if (!reopen) {
-	        if (Modbus.SERIAL_ENCODING_ASCII.equals(parameters.getEncoding())) {
-	            transport = new ModbusASCIITransport();
-	        }
-	        else if (Modbus.SERIAL_ENCODING_RTU.equals(parameters.getEncoding())) {
-	            transport = new ModbusRTUTransport();
-	        }
-	        else {
-	            transport = new ModbusRTUTransport();
-	            logger.warn("Unknown transport encoding [{}] - reverting to RTU", parameters.getEncoding());
-	        }
-	        transport.setEcho(parameters.isEcho());
-	        transport.setTimeout(timeout);
-	
-	        // Open the input and output streams for the connection. If they won't
-	        // open, close the port before throwing an exception.
-	        transport.setCommPort(this);
+            this.transport = this.initializeTransport();
         }
         // Open the port so that we can get it's input stream
         int attempts = 0;
@@ -157,6 +142,28 @@ public class SerialConnection extends AbstractSerialConnection {
 	            }
 	        });
         }
+    }
+
+    protected ModbusSerialTransport initializeTransport() throws IOException {
+        ModbusSerialTransport transport;
+        if (Modbus.SERIAL_ENCODING_ASCII.equals(parameters.getEncoding())) {
+            transport = new ModbusASCIITransport();
+        }
+        else if (Modbus.SERIAL_ENCODING_RTU.equals(parameters.getEncoding())) {
+            transport = new ModbusRTUTransport();
+        }
+        else {
+            transport = new ModbusRTUTransport();
+            logger.warn("Unknown transport encoding [{}] - reverting to RTU", parameters.getEncoding());
+        }
+        transport.setEcho(parameters.isEcho());
+        transport.setTimeout(timeout);
+
+        // Open the input and output streams for the connection. If they won't
+        // open, close the port before throwing an exception.
+        transport.setCommPort(this);
+
+        return transport;
     }
 
     /**

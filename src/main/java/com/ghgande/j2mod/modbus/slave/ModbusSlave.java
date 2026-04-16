@@ -17,18 +17,15 @@ package com.ghgande.j2mod.modbus.slave;
 
 import com.ghgande.j2mod.modbus.ModbusException;
 import com.ghgande.j2mod.modbus.net.AbstractModbusListener;
-import com.ghgande.j2mod.modbus.net.ModbusSerialListener;
-import com.ghgande.j2mod.modbus.net.ModbusTCPListener;
-import com.ghgande.j2mod.modbus.net.ModbusUDPListener;
 import com.ghgande.j2mod.modbus.procimg.ProcessImage;
 import com.ghgande.j2mod.modbus.util.ModbusUtil;
 import com.ghgande.j2mod.modbus.util.SerialParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetAddress;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * Class that implements a wrapper around a Slave Listener
@@ -50,97 +47,22 @@ public class ModbusSlave {
     private final Map<Integer, ProcessImage> processImages = new HashMap<Integer, ProcessImage>();
 
     /**
-     * Creates a TCP modbus slave
-     *
-     * @param port          Port to listen on if IP type
-     * @param poolSize      Pool size for TCP slaves
-     * @param useRtuOverTcp True if the RTU protocol should be used over TCP
-     * @throws ModbusException If a problem occurs e.g. port already in use
-     */
-    protected ModbusSlave(int port, int poolSize, boolean useRtuOverTcp) throws ModbusException {
-        this(ModbusSlaveType.TCP, null, port, poolSize, null, useRtuOverTcp, 0);
-    }
-
-    /**
-     * Creates a TCP modbus slave
-     *
-     * @param address       IP address to listen on
-     * @param port          Port to listen on if IP type
-     * @param poolSize      Pool size for TCP slaves
-     * @param useRtuOverTcp True if the RTU protocol should be used over TCP
-     * @throws ModbusException If a problem occurs e.g. port already in use
-     */
-    protected ModbusSlave(InetAddress address, int port, int poolSize, boolean useRtuOverTcp, int maxIdleSeconds) throws ModbusException {
-        this(ModbusSlaveType.TCP, address, port, poolSize, null, useRtuOverTcp, maxIdleSeconds);
-    }
-
-    /**
-     * Creates a UDP modbus slave
-     *
-     * @param port          Port to listen on if IP type
-     * @param useRtuOverTcp True if the RTU protocol should be used over TCP
-     * @throws ModbusException If a problem occurs e.g. port already in use
-     */
-    protected ModbusSlave(int port, boolean useRtuOverTcp) throws ModbusException {
-        this(ModbusSlaveType.UDP, null, port, 0, null, useRtuOverTcp, 0);
-    }
-
-    /**
-     * Creates a UDP modbus slave
-     *
-     * @param address       IP address to listen on
-     * @param port          Port to listen on if IP type
-     * @param useRtuOverTcp True if the RTU protocol should be used over TCP
-     * @throws ModbusException If a problem occurs e.g. port already in use
-     */
-    protected ModbusSlave(InetAddress address, int port, boolean useRtuOverTcp) throws ModbusException {
-        this(ModbusSlaveType.UDP, address, port, 0, null, useRtuOverTcp, 0);
-    }
-
-    /**
-     * Creates a serial modbus slave
-     *
-     * @param serialParams Serial parameters for serial type slaves
-     * @throws ModbusException If a problem occurs e.g. port already in use
-     */
-    protected ModbusSlave(SerialParameters serialParams) throws ModbusException {
-        this(ModbusSlaveType.SERIAL, null, 0, 0, serialParams, false, 0);
-    }
-
-    /**
      * Creates an appropriate type of listener
      *
-     * @param type           Type of slave to create
-     * @param address        IP address to listen on
-     * @param port           Port to listen on if IP type
-     * @param poolSize       Pool size for TCP slaves
-     * @param serialParams   Serial parameters for serial type slaves
-     * @param useRtuOverTcp  True if the RTU protocol should be used over TCP
-     * @param maxIdleSeconds Maximum idle seconds for TCP connection
+     * @param type            Type of slave to create
+     * @param serialParams    Serial parameters for serial type slaves
+     * @param listenerFactory method used to create the modbus listener
      */
-    private ModbusSlave(ModbusSlaveType type, InetAddress address, int port, int poolSize, SerialParameters serialParams, boolean useRtuOverTcp, int maxIdleSeconds) {
+    protected ModbusSlave(ModbusSlaveType type, SerialParameters serialParams, Supplier<AbstractModbusListener> listenerFactory) {
         this.type = type == null ? ModbusSlaveType.TCP : type;
-        this.port = port;
         this.serialParams = serialParams;
 
         // Create the listener
-
         logger.debug("Creating {} listener", this.type);
-        if (this.type.is(ModbusSlaveType.UDP)) {
-            listener = new ModbusUDPListener();
-        }
-        else if (this.type.is(ModbusSlaveType.TCP)) {
-            ModbusTCPListener tcpListener = new ModbusTCPListener(poolSize, useRtuOverTcp);
-            tcpListener.setMaxIdleSeconds(maxIdleSeconds);
-            listener = tcpListener;
-        }
-        else {
-            listener = new ModbusSerialListener(serialParams);
-        }
+        this.listener = listenerFactory.get();
+        this.listener.setTimeout(0);
 
-        listener.setAddress(address);
-        listener.setPort(port);
-        listener.setTimeout(0);
+        this.port = this.listener.getPort();
     }
 
     /**

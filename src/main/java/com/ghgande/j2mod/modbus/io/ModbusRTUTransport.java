@@ -53,11 +53,35 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
      * @param out       Output buffer to populate
      * @throws IOException If data cannot be read from the port
      */
-    private void readRequestData(int byteCount, BytesOutputStream out) throws IOException {
+    protected void readRequestData(int byteCount, BytesOutputStream out) throws IOException {
         byteCount += 2;
         byte[] inpBuf = new byte[byteCount];
         readBytes(inpBuf, byteCount);
         out.write(inpBuf, 0, byteCount);
+    }
+
+    /**
+     * Factory method creating the required specialized <tt>ModbusRequest</tt>
+     * instance.
+     *
+     * @param functionCode the function code of the request as <tt>int</tt>.
+     *
+     * @return a ModbusRequest instance specific for the given function type.
+     */
+    protected ModbusRequest createModbusRequest(int functionCode) {
+        return ModbusRequest.createModbusRequest(functionCode);
+    }
+
+    /**
+     * Factory method creating the required specialized <tt>ModbusResponse</tt>
+     * instance.
+     *
+     * @param functionCode the function code of the response as <tt>int</tt>.
+     *
+     * @return a ModbusResponse instance specific for the given function code.
+     */
+    protected ModbusResponse createModbusResponse(int functionCode) {
+        return ModbusResponse.createModbusResponse(functionCode);
     }
 
     /**
@@ -66,7 +90,7 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
      * @param function - Modbus function code
      * @param out      - Byte stream buffer to hold actual message
      */
-    private void getRequest(int function, BytesOutputStream out) throws IOException {
+    protected void getRequest(int function, BytesOutputStream out) throws IOException {
         int byteCount;
         byte[] inpBuf = new byte[256];
         try {
@@ -139,7 +163,7 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
      * @param out      The output buffer to put the result
      * @throws IOException If data cannot be read from the port
      */
-    private void getResponse(int function, BytesOutputStream out) throws IOException {
+    protected void getResponse(int function, BytesOutputStream out) throws IOException {
         byte[] inpBuf = new byte[256];
         try {
             if ((function & 0x80) == 0) {
@@ -298,7 +322,7 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
                         byteInputOutputStream.writeByte(fc);
 
                         // create request to acquire length of message
-                        request = ModbusRequest.createModbusRequest(fc);
+                        request = createModbusRequest(fc);
                         request.setHeadless();
 
                         /*
@@ -321,7 +345,7 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
                         int[] crc = ModbusUtil.calculateCRC(inBuffer, 0, dlength); // does not include CRC
                         if (ModbusUtil.unsignedByteToInt(inBuffer[dlength]) != crc[0] || ModbusUtil.unsignedByteToInt(inBuffer[dlength + 1]) != crc[1]) {
                             if (logger.isDebugEnabled()) {
-                                logger.debug("CRC should be {}, {} inBuffer={}", Integer.toHexString(crc[0]), Integer.toHexString(crc[1]), 
+                                logger.debug("CRC should be {}, {} inBuffer={}", Integer.toHexString(crc[0]), Integer.toHexString(crc[1]),
                                 		ModbusUtil.toHex(inBuffer, 0, dlength + 2));
                             }
 
@@ -402,6 +426,10 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
         }
     }
 
+    protected int readUid() throws IOException {
+        return readByte();
+    }
+
     /**
      * readResponse - Read the bytes for the response from the slave.
      *
@@ -415,21 +443,24 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
         ModbusResponse response;
         int dlength;
 
+        int uid = -1;
+        int fc = -1;
+
         try {
             do {
                 // 1. read to function code, create request and read function
                 // specific bytes
                 synchronized (byteInputStream) {
-                    int uid = readByte();
+                    uid = readUid();
 
                     if (uid != -1) {
-                        int fc = readByte();
+                        fc = readByte();
                         byteInputOutputStream.reset();
                         byteInputOutputStream.writeByte(uid);
                         byteInputOutputStream.writeByte(fc);
 
                         // create response to acquire length of message
-                        response = ModbusResponse.createModbusResponse(fc);
+                        response = createModbusResponse(fc);
                         response.setHeadless();
 
                         /*
@@ -468,7 +499,7 @@ public class ModbusRTUTransport extends ModbusSerialTransport {
         }
         catch (IOException ex) {
             // FIXME: This printout is wrong when reading response from other slave
-            throw new ModbusIOException("I/O exception - failed to read response for request [%s] - %s", ModbusUtil.toHex(lastRequest), ex.getMessage());
+            throw new ModbusIOException(String.format("I/O exception - failed to read response for request [%s] - uid: %d - fc: %d - %s", ModbusUtil.toHex(lastRequest), uid, fc, ex.getMessage()), ex);
         }
     }
 }

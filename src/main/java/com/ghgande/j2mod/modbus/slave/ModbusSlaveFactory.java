@@ -17,6 +17,9 @@ package com.ghgande.j2mod.modbus.slave;
 
 import com.ghgande.j2mod.modbus.ModbusException;
 import com.ghgande.j2mod.modbus.net.AbstractModbusListener;
+import com.ghgande.j2mod.modbus.net.ModbusSerialListener;
+import com.ghgande.j2mod.modbus.net.ModbusTCPListener;
+import com.ghgande.j2mod.modbus.net.ModbusUDPListener;
 import com.ghgande.j2mod.modbus.util.ModbusUtil;
 import com.ghgande.j2mod.modbus.util.SerialParameters;
 
@@ -24,6 +27,7 @@ import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Supplier;
 
 /**
  * This is a factory class that allows users to easily create and manage slaves.<br>
@@ -98,7 +102,13 @@ public class ModbusSlaveFactory {
             return slaves.get(key);
         }
         else {
-            ModbusSlave slave = new ModbusSlave(address, port, poolSize, useRtuOverTcp, maxIdleSeconds);
+            ModbusSlave slave = new ModbusSlave(ModbusSlaveType.TCP, null, () -> {
+                ModbusTCPListener listener = new ModbusTCPListener(poolSize, useRtuOverTcp);
+                listener.setAddress(address);
+                listener.setPort(port);
+                listener.setMaxIdleSeconds(maxIdleSeconds);
+                return listener;
+            });
             slaves.put(key, slave);
             return slave;
         }
@@ -129,7 +139,12 @@ public class ModbusSlaveFactory {
             return slaves.get(key);
         }
         else {
-            ModbusSlave slave = new ModbusSlave(address, port, false);
+            ModbusSlave slave = new ModbusSlave(ModbusSlaveType.UDP, null, () -> {
+                ModbusUDPListener listener = new ModbusUDPListener();
+                listener.setAddress(address);
+                listener.setPort(port);
+                return listener;
+            });
             slaves.put(key, slave);
             return slave;
         }
@@ -143,6 +158,17 @@ public class ModbusSlaveFactory {
      * @throws ModbusException If a problem occurs e.g. port already in use
      */
     public static synchronized ModbusSlave createSerialSlave(SerialParameters serialParams) throws ModbusException {
+        return createSerialSlave(serialParams, () -> new ModbusSerialListener(serialParams));
+    }
+
+    /**
+     * Creates a serial modbus slave or returns the one already allocated to this port
+     *
+     * @param serialParams Serial parameters for serial type slaves
+     * @return new or existing Serial modbus slave associated with the port
+     * @throws ModbusException If a problem occurs e.g. port already in use
+     */
+    public static synchronized ModbusSlave createSerialSlave(SerialParameters serialParams, Supplier<AbstractModbusListener> listenerFactory) throws ModbusException {
         ModbusSlave slave;
         if (serialParams == null) {
             throw new ModbusException("Serial parameters are null");
@@ -163,7 +189,7 @@ public class ModbusSlaveFactory {
 
         // If we don;t have a slave, create one
         if (slave == null) {
-            slave = new ModbusSlave(serialParams);
+            slave = new ModbusSlave(ModbusSlaveType.SERIAL, serialParams, listenerFactory);
             slaves.put(ModbusSlaveType.SERIAL.getKey(serialParams.getPortName()), slave);
         }
         return slave;
