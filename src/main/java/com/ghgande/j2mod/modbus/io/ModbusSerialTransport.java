@@ -113,24 +113,27 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
 
             double bytesPerSec = ((double)commPort.getBaudRate()) / (((commPort.getNumDataBits() == 0) ? 8 : commPort.getNumDataBits()) + ((commPort.getNumStopBits() == 0) ? 1 : commPort.getNumStopBits()) + ((commPort.getParity() == SerialPort.NO_PARITY) ? 0 : 1));
             double delay = 1000000000.0 * msg.getOutputLength() / bytesPerSec;
-            double delayMilliSeconds = Math.floor(delay / 1000000);
-            double delayNanoSeconds = delay % 1000000;
+            double delayMilliSeconds = Math.max(0.0, Math.floor(delay / 1000000));
+            double delayNanoSeconds = Math.max(0.0, delay % 1000000);
             try {
 
                 // For delays less than a millisecond, we need to chew CPU cycles unfortunately
                 // There are some fiddle factors here to allow for some oddities in the hardware
 
                 if (delayMilliSeconds == 0.0) {
-                    int priority = Thread.currentThread().getPriority();
-                    Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-                    long end = startTime + ((int) (delayNanoSeconds * 1.3));
-                    while (System.nanoTime() < end) {
-                        // noop
+                    if (delayNanoSeconds > 0.0) {
+                        int priority = Thread.currentThread().getPriority();
+                        Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+                        long end = startTime + ((int) (delayNanoSeconds * 1.3));
+                        while (System.nanoTime() < end) {
+                            // noop
+                        }
+                        Thread.currentThread().setPriority(priority);
                     }
-                    Thread.currentThread().setPriority(priority);
                 }
                 else {
-                    Thread.sleep((int) (delayMilliSeconds * 1.7), (int) (delayNanoSeconds * 1.5));
+                    final int nanosSleep = Math.max(999999, (int) (delayNanoSeconds * 1.5));
+                    Thread.sleep((int) (delayMilliSeconds * 1.7), nanosSleep);
                 }
             }
             catch (Exception e) {
