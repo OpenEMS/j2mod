@@ -132,7 +132,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
                     }
                 }
                 else {
-                    final int nanosSleep = Math.max(999999, (int) (delayNanoSeconds * 1.5));
+                    final int nanosSleep = Math.min(999999, (int) (delayNanoSeconds * 1.5));
                     Thread.sleep((int) (delayMilliSeconds * 1.7), nanosSleep);
                 }
             }
