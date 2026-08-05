@@ -31,6 +31,8 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Abstract base class for serial <tt>ModbusTransport</tt>
@@ -96,6 +98,11 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         writeMessage(msg);
     }
 
+    // Historical calibration factors.
+    private static final double MILLIS_SLEEP_FUDGE_FACTOR = 1.7;
+    private static final double NANOS_SLEEP_FUDGE_FACTOR_S = 1.3;
+    private static final double NANOS_SLEEP_FUDGE_FACTOR_L = 1.5;
+
     /**
      * Writes the request/response message to the port
      *
@@ -110,38 +117,54 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             long startTime = System.nanoTime();
 
             // Wait here for the message to have been sent
-
-            double bytesPerSec = ((double)commPort.getBaudRate()) / (((commPort.getNumDataBits() == 0) ? 8 : commPort.getNumDataBits()) + ((commPort.getNumStopBits() == 0) ? 1 : commPort.getNumStopBits()) + ((commPort.getParity() == SerialPort.NO_PARITY) ? 0 : 1));
-            double delay = 1000000000.0 * msg.getOutputLength() / bytesPerSec;
-            double delayMilliSeconds = Math.max(0.0, Math.floor(delay / 1000000));
-            double delayNanoSeconds = Math.max(0.0, delay % 1000000);
-            try {
-
-                // For delays less than a millisecond, we need to chew CPU cycles unfortunately
-                // There are some fiddle factors here to allow for some oddities in the hardware
-
-                if (delayMilliSeconds == 0.0) {
-                    if (delayNanoSeconds > 0.0) {
-                        int priority = Thread.currentThread().getPriority();
-                        Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-                        long end = startTime + ((int) (delayNanoSeconds * 1.3));
-                        while (System.nanoTime() < end) {
-                            // noop
-                        }
-                        Thread.currentThread().setPriority(priority);
-                    }
-                }
-                else {
-                    final int nanosSleep = Math.min(999999, (int) (delayNanoSeconds * 1.5));
-                    Thread.sleep((int) (delayMilliSeconds * 1.7), nanosSleep);
-                }
-            }
-            catch (Exception e) {
-                logger.debug("nothing to do");
-            }
+            double bytesPerSec = getBytesPerSecond();
+            double transmissionTimeNanos = 1_000_000_000.0 * msg.getOutputLength() / bytesPerSec;
+            waitForTransmission(startTime, transmissionTimeNanos);
         }
         finally {
             notifyListenersAfterWrite(msg);
+        }
+    }
+
+    private double getBytesPerSecond() {
+        final double baudRate = commPort.getBaudRate();
+        final double startBit = 1.0;
+        final double dataBits = commPort.getNumDataBits() == 0 ? 8 : commPort.getNumDataBits();
+        final double stopBits = commPort.getNumStopBits() == 0 ? 1 : commPort.getNumStopBits();
+        final double parityBits = commPort.getParity() == SerialPort.NO_PARITY ? 0 : 1;
+
+        return Math.max(10.0, baudRate / ( startBit + dataBits + stopBits + parityBits ));
+    }
+
+    private void waitForTransmission(long startTime, double transmissionTimeNanos) {
+        final long sleepMillis = (long) Math.floor(transmissionTimeNanos / 1_000_000.0);
+        final double sleepNanos = transmissionTimeNanos % 1_000_000;
+
+        if (sleepMillis > 0) {
+            try {
+                final double fudgedNanoSleep = sleepNanos * NANOS_SLEEP_FUDGE_FACTOR_L;
+
+                final long totalSleepMillis = (long) ((sleepMillis * MILLIS_SLEEP_FUDGE_FACTOR) + (fudgedNanoSleep / 1_000_000.0));
+                final int totalSleepNanos = (int) fudgedNanoSleep % 1_000_000;
+
+                Thread.sleep(totalSleepMillis, totalSleepNanos);
+            }  catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.debug("nothing to do. Sleep interrupted.", e);
+            }
+        } else if  (sleepNanos > 0) {
+            // For delays less than a millisecond, we need to chew CPU cycles unfortunately
+            // There are some fiddle factors here to allow for some oddities in the hardware
+            final int priority = Thread.currentThread().getPriority();
+            try {
+                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+                long end = startTime + (long) (sleepNanos * NANOS_SLEEP_FUDGE_FACTOR_S);
+                while (System.nanoTime() < end) {
+                    // noop
+                }
+            } finally {
+                Thread.currentThread().setPriority(priority);
+            }
         }
     }
 
@@ -331,7 +354,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             }
         }
     }
-    
+
     /**
      * <code>setCommPort</code> sets the comm port member and prepares the input
      * and output streams to be used for reading from and writing to.
