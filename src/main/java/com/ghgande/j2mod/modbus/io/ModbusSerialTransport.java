@@ -59,9 +59,17 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     /**
      * The number of nanoseconds there is in a millisecond
      */
-    private static final int NS_IN_A_MS = 1000000;
+    private static final int NS_IN_A_MS = 1_000_000;
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
+
+    /**
+     *  Historical calibration factors, for Transmission wait timing.
+     */
+    private static final double MILLIS_SLEEP_FUDGE_FACTOR = 1.7;
+    private static final double NANOS_SLEEP_FUDGE_FACTOR_SHORT = 1.3;
+    private static final double NANOS_SLEEP_FUDGE_FACTOR_LONG = 1.5;
+
     private AbstractSerialConnection commPort;
     boolean echo = false;     // require RS-485 echo processing
     private final Set<AbstractSerialTransportListener> listeners = Collections.synchronizedSet(new HashSet<AbstractSerialTransportListener>());
@@ -98,11 +106,6 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         writeMessage(msg);
     }
 
-    // Historical calibration factors.
-    private static final double MILLIS_SLEEP_FUDGE_FACTOR = 1.7;
-    private static final double NANOS_SLEEP_FUDGE_FACTOR_S = 1.3;
-    private static final double NANOS_SLEEP_FUDGE_FACTOR_L = 1.5;
-
     /**
      * Writes the request/response message to the port
      *
@@ -137,15 +140,15 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     }
 
     private void waitForTransmission(long startTime, double transmissionTimeNanos) {
-        final long sleepMillis = (long) Math.floor(transmissionTimeNanos / 1_000_000.0);
-        final double sleepNanos = transmissionTimeNanos % 1_000_000;
+        final long sleepMillis = (long) Math.floor(transmissionTimeNanos / NS_IN_A_MS);
+        final double sleepNanos = transmissionTimeNanos % NS_IN_A_MS;
 
         if (sleepMillis > 0) {
             try {
-                final double fudgedNanoSleep = sleepNanos * NANOS_SLEEP_FUDGE_FACTOR_L;
+                final double fudgedNanoSleep = sleepNanos * NANOS_SLEEP_FUDGE_FACTOR_LONG;
 
-                final long totalSleepMillis = (long) ((sleepMillis * MILLIS_SLEEP_FUDGE_FACTOR) + (fudgedNanoSleep / 1_000_000.0));
-                final int totalSleepNanos = (int) fudgedNanoSleep % 1_000_000;
+                final long totalSleepMillis = (long) ((sleepMillis * MILLIS_SLEEP_FUDGE_FACTOR) + (fudgedNanoSleep / NS_IN_A_MS));
+                final int totalSleepNanos = (int) fudgedNanoSleep % NS_IN_A_MS;
 
                 Thread.sleep(totalSleepMillis, totalSleepNanos);
             }  catch (InterruptedException e) {
@@ -158,7 +161,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             final int priority = Thread.currentThread().getPriority();
             try {
                 Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-                long end = startTime + (long) (sleepNanos * NANOS_SLEEP_FUDGE_FACTOR_S);
+                long end = startTime + (long) (sleepNanos * NANOS_SLEEP_FUDGE_FACTOR_SHORT);
                 while (System.nanoTime() < end) {
                     // noop
                 }
