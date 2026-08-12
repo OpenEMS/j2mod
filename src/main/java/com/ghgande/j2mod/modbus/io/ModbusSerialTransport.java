@@ -156,7 +156,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
 
             // Wait here for the message to have been sent
             final double charactersPerSecond = commPort.getBaudRate() / commPort.getBitsPerCharacter();
-            final double transmissionTimeNanos = NS_IN_A_SEC * msg.getOutputLength() / charactersPerSecond;
+            final double transmissionTimeNanos = (msg.getOutputLength() / charactersPerSecond) * NS_IN_A_SEC;
             waitForTransmission(startTime, transmissionTimeNanos);
         }
         finally {
