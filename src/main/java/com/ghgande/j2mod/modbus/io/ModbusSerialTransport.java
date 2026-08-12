@@ -55,14 +55,19 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     static final int FRAME_END = 2000;
 
     /**
-     * The number of nanoseconds there is in a millisecond
+     * The number of nanoseconds in a millisecond
      */
-    private static final int NS_IN_A_MS = 1_000_000;
+    private static final double NS_IN_A_MS = 1_000_000.0;
 
     /**
-     * The number of nanoseconds there is in a second
+     * The number of microseconds in a second.
      */
-    private static final long NS_IN_A_SEC = 1_000_000_000L;
+    private static final double MICROS_IN_A_SEC = 1_000_000.0;
+
+    /**
+     * The number of nanoseconds in a second
+     */
+    private static final double NS_IN_A_SEC = 1_000_000_000.0;
 
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
@@ -113,18 +118,17 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         if (transmissionTimeNanos >= NS_IN_A_MS) {
             try {
                 final long adjustedDelay = (long) (transmissionTimeNanos * LONG_DELAY_FUDGE_FACTOR);
-                final long sleepMillis = adjustedDelay / NS_IN_A_MS;
+                final long sleepMillis = (long) (adjustedDelay / NS_IN_A_MS);
                 final int sleepNanos = (int) (adjustedDelay % NS_IN_A_MS);
 
                 Thread.sleep(sleepMillis, sleepNanos);
             }
             catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
-                logger.debug("nothing to do. Sleep interrupted.", e);
+                logger.debug("waitForTransmission interrupted. Ignoring.", e);
             }
             catch (RuntimeException ex) {
-                Thread.currentThread().interrupt();
-                logger.debug("nothing to do.", ex);
+                logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
             }
         }
         else if  (transmissionTimeNanos > 0) {
@@ -140,8 +144,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
                 }
             }
             catch (RuntimeException ex) {
-                Thread.currentThread().interrupt();
-                logger.debug("nothing to do.", ex);
+                logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
             }
             finally {
                 Thread.currentThread().setPriority(priority);
@@ -637,7 +640,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             int delay = getInterFrameDelay() / 1000;
 
             // How long since the last message we received
-            long gapSinceLastMessage = (System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS;
+            final long gapSinceLastMessage = (long) ((System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS);
             if (delay > gapSinceLastMessage) {
                 long sleepTime = delay - gapSinceLastMessage;
 
@@ -661,7 +664,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         }
         else {
             long delay = Math.max(getCharIntervalMicro(Modbus.INTER_MESSAGE_GAP), Modbus.MINIMUM_TRANSMIT_DELAY * 1000L);
-            return delay > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) delay;
+            return (int) Math.min(Integer.MAX_VALUE, delay);
         }
     }
 
@@ -690,7 +693,8 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         // Make use we have a gap of 3.5 characters between adjacent requests
         // We have to do the calculations here because it is possible that the caller may have changed
         // the connection characteristics if they provided the connection instance
-        return (long) (chars * NS_IN_A_MS * commPort.getBitsPerCharacter() / commPort.getBaudRate());
+        final double microsPerChar = (commPort.getBitsPerCharacter() / (double) commPort.getBaudRate()) * MICROS_IN_A_SEC;
+        return (long) (microsPerChar * chars);
     }
 
     /**

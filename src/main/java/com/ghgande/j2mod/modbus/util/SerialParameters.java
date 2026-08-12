@@ -37,7 +37,7 @@ public class SerialParameters {
     private static final boolean DEFAULT_RS485_MODE = false;
     private static final boolean DEFAULT_RS485_TX_ENABLE_ACTIVE_HIGH = true;
     private static final boolean DEFAULT_RS485_ENABLE_TERMINATION = false;
-    private static final boolean DEFAULT_RS485_TX_DURING_RX = false;
+    private static final boolean DEFAULT_RS485_RX_DURING_TX = false;
     private static final int DEFAULT_RS485_DELAY_BEFORE_TX_MICROSECONDS = 1000;
     private static final int DEFAULT_RS485_DELAY_AFTER_TX_MICROSECONDS = 1000;
 
@@ -65,24 +65,13 @@ public class SerialParameters {
      * default values.
      */
     public SerialParameters() {
-        portName = "";
-        baudRate = 9600;
-        flowControlIn = AbstractSerialConnection.FLOW_CONTROL_DISABLED;
-        flowControlOut = AbstractSerialConnection.FLOW_CONTROL_DISABLED;
-        databits = 8;
-        stopbits = AbstractSerialConnection.ONE_STOP_BIT;
-        parity = AbstractSerialConnection.NO_PARITY;
-        // Historically, the encoding has been null which got converted to RTU
-        // by SerialConnection.open(). Let's make it more explicit which serial
-        // protocol will be used by default.
-        encoding = Modbus.SERIAL_ENCODING_RTU;
-        echo = false;
-        openDelay = AbstractSerialConnection.OPEN_DELAY;
-        rs485Mode = DEFAULT_RS485_MODE;
-        rs485TxEnableActiveHigh = DEFAULT_RS485_TX_ENABLE_ACTIVE_HIGH;
-        rs485DelayBeforeTxMicroseconds = DEFAULT_RS485_DELAY_BEFORE_TX_MICROSECONDS;
-        rs485DelayAfterTxMicroseconds = DEFAULT_RS485_DELAY_AFTER_TX_MICROSECONDS;
-        rs485DisableControl = DEFAULT_RS485_DISABLE_CONTROL;
+        this("", 9600,
+                AbstractSerialConnection.FLOW_CONTROL_DISABLED,
+                AbstractSerialConnection.FLOW_CONTROL_DISABLED,
+                8,
+                AbstractSerialConnection.ONE_STOP_BIT,
+                AbstractSerialConnection.NO_PARITY,
+                false);
     }
 
     /**
@@ -105,17 +94,17 @@ public class SerialParameters {
                             int stopbits,
                             int parity,
                             boolean echo) {
-        // Perform default initialization and update fields of interest
-        // afterwards.
-        this();
-        this.portName = portName;
-        this.baudRate = baudRate;
-        this.flowControlIn = flowControlIn;
-        this.flowControlOut = flowControlOut;
-        this.databits = databits;
-        this.stopbits = stopbits;
-        this.parity = parity;
-        this.echo = echo;
+        this(portName, baudRate,
+                flowControlIn,
+                flowControlOut,
+                databits,
+                stopbits,
+                parity,
+                echo,
+                DEFAULT_RS485_MODE,
+                DEFAULT_RS485_TX_ENABLE_ACTIVE_HIGH,
+                DEFAULT_RS485_DELAY_BEFORE_TX_MICROSECONDS,
+                DEFAULT_RS485_DELAY_AFTER_TX_MICROSECONDS);
     }
 
     /**
@@ -160,13 +149,26 @@ public class SerialParameters {
                             int rs485DelayBeforeTxMicroseconds,
                             int rs485DelayAfterTxMicroseconds
                             ) {
-        // Perform default non-RS-485 initialization and update fields of
-        // interest afterwards.
-        this(portName, baudRate, flowControlIn, flowControlOut, databits, stopbits, parity, echo);
+        this.portName = portName;
+        this.setBaudRate(baudRate);
+        this.flowControlIn = flowControlIn;
+        this.flowControlOut = flowControlOut;
+        this.databits = databits;
+        this.stopbits = stopbits;
+        this.parity = parity;
+        this.echo = echo;
         this.rs485Mode = rs485Mode;
         this.rs485TxEnableActiveHigh = rs485TxEnableActiveHigh;
         this.rs485DelayBeforeTxMicroseconds = rs485DelayBeforeTxMicroseconds;
         this.rs485DelayAfterTxMicroseconds = rs485DelayAfterTxMicroseconds;
+        // Historically, the encoding has been null which got converted to RTU
+        // by SerialConnection.open(). Let's make it more explicit which serial
+        // protocol will be used by default.
+        this.encoding = Modbus.SERIAL_ENCODING_RTU;
+        this.openDelay = AbstractSerialConnection.OPEN_DELAY;
+        this.rs485DisableControl = DEFAULT_RS485_DISABLE_CONTROL;
+        this.rs485EnableTermination = DEFAULT_RS485_ENABLE_TERMINATION;
+        this.rs485RxDuringTx = DEFAULT_RS485_RX_DURING_TX;
     }
 
     /**
@@ -217,21 +219,15 @@ public class SerialParameters {
     }
 
     /**
-     * Sets the baud rate.
+     * Sets the baud rate. Has to be >=1.
      *
      * @param rate the new baud rate.
      */
     public void setBaudRate(int rate) {
+        if (rate < 1) {
+            throw new IllegalArgumentException("Invalid baud rate: " + rate);
+        }
         baudRate = rate;
-    }
-
-    /**
-     * Return the baud rate as <tt>int</tt>.
-     *
-     * @return the baud rate as <tt>int</tt>.
-     */
-    public int getBaudRate() {
-        return baudRate;
     }
 
     /**
@@ -240,7 +236,18 @@ public class SerialParameters {
      * @param rate the new baud rate.
      */
     public void setBaudRate(String rate) {
-        baudRate = Integer.parseInt(rate);
+        setBaudRate(Integer.parseInt(rate));
+    }
+
+    /**
+     * Return the baud rate as <tt>int</tt>.
+     * <p>
+     * Is guaranteed to return a value >=1
+     *
+     * @return the baud rate as <tt>int</tt>.
+     */
+    public int getBaudRate() {
+        return baudRate;
     }
 
     /**
