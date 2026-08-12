@@ -62,7 +62,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     /**
      * The number of nanoseconds there is in a second
      */
-    private static final int NS_IN_A_SEC = 1_000_000_000;
+    private static final long NS_IN_A_SEC = 1_000_000_000L;
 
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
