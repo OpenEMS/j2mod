@@ -122,6 +122,10 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
                 Thread.currentThread().interrupt();
                 logger.debug("nothing to do. Sleep interrupted.", e);
             }
+            catch (RuntimeException ex) {
+                Thread.currentThread().interrupt();
+                logger.debug("nothing to do.", ex);
+            }
         }
         else if  (transmissionTimeNanos > 0) {
             // For delays less than a millisecond, we need to chew CPU cycles unfortunately
@@ -134,6 +138,10 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
                 while (System.nanoTime() < end) {
                     // noop
                 }
+            }
+            catch (RuntimeException ex) {
+                Thread.currentThread().interrupt();
+                logger.debug("nothing to do.", ex);
             }
             finally {
                 Thread.currentThread().setPriority(priority);

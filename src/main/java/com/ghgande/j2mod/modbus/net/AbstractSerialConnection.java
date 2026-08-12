@@ -212,7 +212,7 @@ public abstract class AbstractSerialConnection {
         final int numDataBits = getNumDataBits();
         final int dataBits = numDataBits == 0 ? 8 : numDataBits;
         final double stopBits = getStopBits();
-        final double parityBits = getParity() == SerialPort.NO_PARITY ? 0 : 1;
+        final double parityBits = getParity() == NO_PARITY ? 0 : 1;
 
         return startBit + dataBits + stopBits + parityBits;
     }
