@@ -125,19 +125,13 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
 
         try {
             long remainingNanos = targetEndNanos - System.nanoTime();
-            if (remainingNanos >= 2_000_000L) {
-                long sleepMillis = (long) ((remainingNanos - 1_000_000L) / NS_IN_A_MS);
+            if (remainingNanos >= 1_750_000L) {
+                long sleepMillis = (long) ((remainingNanos - 750_000L) / NS_IN_A_MS);
                 Thread.sleep(sleepMillis);
             }
-            do {
-                remainingNanos = targetEndNanos - System.nanoTime();
-                if (remainingNanos > 40_000L) {
-                    // Between 40µs and 2ms: Yield CPU
-                    Thread.yield();
-                } else {
-                    // <= 40µs: Pure busy wait
-                }
-            } while (remainingNanos > 0);
+            while (System.nanoTime() < targetEndNanos) {
+                // Pure busy wait
+            };
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
@@ -649,9 +643,14 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     }
 
     /**
-     * In microseconds
+     * Calculates the inter-frame delay according to the
+     * MODBUS over Serial Line Specification V1.02.
+     * <ul>
+     *  <li> baud rates &le; 19200: 3.5 Character time </li>
+     *  <li> baud rates &gt; 19200: 1750 microseconds </li>
+     * </ul>
      *
-     * @return Delay between frames
+     * @return the inter-frame delay in microseconds
      */
     int getInterFrameDelay() {
         if (commPort.getBaudRate() > 19200) {
@@ -664,13 +663,18 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     }
 
     /**
-     * The maximum delay between characters in microseconds
+     * Calculates the inter-character time-out according to the
+     * MODBUS over Serial Line Specification V1.02.
+     * <ul>
+     *  <li> baud rates &le; 19200: 1.5 Character time </li>
+     *  <li> baud rates &gt; 19200: 750 microseconds </li>
+     * </ul>
      *
-     * @return microseconds
+     * @return the inter-character time-out in microseconds
      */
-    long getMaxCharDelay() {
+    long getMaxCharTimeout() {
         if (commPort.getBaudRate() > 19200) {
-            return 1750;
+            return 750;
         }
         else {
             return getCharIntervalMicro(Modbus.INTER_CHARACTER_GAP);
