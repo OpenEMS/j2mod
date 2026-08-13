@@ -15,7 +15,6 @@
  */
 package com.ghgande.j2mod.modbus.io;
 
-import com.fazecast.jSerialComm.SerialPort;
 import com.ghgande.j2mod.modbus.Modbus;
 import com.ghgande.j2mod.modbus.ModbusIOException;
 import com.ghgande.j2mod.modbus.msg.ModbusMessage;
@@ -114,41 +113,38 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         writeMessage(msg);
     }
 
-    private void waitForTransmission(long startTime, double transmissionTimeNanos) {
-        if (transmissionTimeNanos >= NS_IN_A_MS) {
-            try {
-                final long adjustedDelay = (long) (transmissionTimeNanos * LONG_DELAY_FUDGE_FACTOR);
-                final long sleepMillis = (long) (adjustedDelay / NS_IN_A_MS);
-                final int sleepNanos = (int) (adjustedDelay % NS_IN_A_MS);
-
-                Thread.sleep(sleepMillis, sleepNanos);
-            }
-            catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.debug("waitForTransmission interrupted. Ignoring.", e);
-            }
-            catch (RuntimeException ex) {
-                logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
-            }
+    private void waitForTransmission(double transmissionTimeNanos) {
+        if (transmissionTimeNanos <= 0) {
+            return;
         }
-        else if  (transmissionTimeNanos > 0) {
-            // For delays less than a millisecond, we need to chew CPU cycles unfortunately
-            // There are some fiddle factors here to allow for some oddities in the hardware
-            final int priority = Thread.currentThread().getPriority();
-            try {
-                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-                final long adjustedDelay = (long) (transmissionTimeNanos * SHORT_DELAY_FUDGE_FACTOR);
-                final long end = startTime + adjustedDelay;
-                while (System.nanoTime() < end) {
-                    // noop
+
+        final double fudgeFactor = (transmissionTimeNanos >= NS_IN_A_MS) //
+                ? LONG_DELAY_FUDGE_FACTOR //
+                : SHORT_DELAY_FUDGE_FACTOR;
+        final long targetEndNanos = System.nanoTime() + (long) (transmissionTimeNanos * fudgeFactor);
+
+        try {
+            long remainingNanos = targetEndNanos - System.nanoTime();
+            if (remainingNanos >= 2_000_000L) {
+                long sleepMillis = (long) ((remainingNanos - 1_000_000L) / NS_IN_A_MS);
+                Thread.sleep(sleepMillis);
+            }
+            do {
+                remainingNanos = targetEndNanos - System.nanoTime();
+                if (remainingNanos > 40_000L) {
+                    // Between 40µs and 2ms: Yield CPU
+                    Thread.yield();
+                } else {
+                    // <= 40µs: Pure busy wait
                 }
-            }
-            catch (RuntimeException ex) {
-                logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
-            }
-            finally {
-                Thread.currentThread().setPriority(priority);
-            }
+            } while (remainingNanos > 0);
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.debug("waitForTransmission interrupted. Ignoring.", e);
+        }
+        catch (RuntimeException ex) {
+            logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
         }
     }
 
@@ -163,12 +159,11 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         notifyListenersBeforeWrite(msg);
         try {
             writeMessageOut(msg);
-            final long startTime = System.nanoTime();
 
             // Wait here for the message to have been sent
             final double charactersPerSecond = commPort.getBaudRate() / commPort.getBitsPerCharacter();
             final double transmissionTimeNanos = (msg.getOutputLength() / charactersPerSecond) * NS_IN_A_SEC;
-            waitForTransmission(startTime, transmissionTimeNanos);
+            waitForTransmission(transmissionTimeNanos);
         }
         finally {
             notifyListenersAfterWrite(msg);

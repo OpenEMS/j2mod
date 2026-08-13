@@ -225,7 +225,7 @@ public class SerialParameters {
      */
     public void setBaudRate(int rate) {
         if (rate < 1) {
-            throw new IllegalArgumentException("Invalid baud rate: " + rate);
+            throw new IllegalArgumentException("Baud rate must be greater than 0, but was: " + rate);
         }
         baudRate = rate;
     }
