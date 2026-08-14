@@ -129,9 +129,16 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
                 long sleepMillis = (long) ((remainingNanos - 750_000L) / NS_IN_A_MS);
                 Thread.sleep(sleepMillis);
             }
+            if (transmissionTimeNanos >= 5 * NS_IN_A_MS) {
+                // For long delays, allow the scheduler to run other threads
+                // before entering the final high-precision spin phase.
+                while ((targetEndNanos - System.nanoTime()) > 100_000L) {
+                    Thread.sleep(0);
+                }
+            }
             while (System.nanoTime() < targetEndNanos) {
                 // Pure busy wait
-            };
+            }
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
