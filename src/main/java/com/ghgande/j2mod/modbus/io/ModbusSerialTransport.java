@@ -71,6 +71,19 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
 
+
+    /**
+     * Minimum sleep duration in nanoseconds.
+     * Below this, only busy-waiting is accurate.
+     */
+    private static final long SLEEP_MIN_NS = 1_000_000L;
+
+    /**
+     * Safety buffer subtracted from sleep time
+     * so the thread wakes up early and finishes precision timing via busy-wait.
+     */
+    private static final long SLEEP_MARGIN_NS = 750_000L;
+
     /**
      * Historical calibration factors, for Transmission wait timing.
      */
@@ -125,8 +138,8 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
 
         try {
             long remainingNanos = targetEndNanos - System.nanoTime();
-            if (remainingNanos >= 1_750_000L) {
-                long sleepMillis = (long) ((remainingNanos - 750_000L) / NS_IN_A_MS);
+            if (remainingNanos >= (SLEEP_MIN_NS + SLEEP_MARGIN_NS)) {
+                long sleepMillis = (long) ((remainingNanos - SLEEP_MARGIN_NS) / NS_IN_A_MS);
                 Thread.sleep(sleepMillis);
             }
             if (transmissionTimeNanos >= 5 * NS_IN_A_MS) {
