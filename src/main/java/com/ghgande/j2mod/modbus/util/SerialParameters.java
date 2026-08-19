@@ -219,7 +219,7 @@ public class SerialParameters {
     }
 
     /**
-     * Sets the baud rate. Has to be >=1.
+     * Sets the baud rate. Has to be &ge;1.
      *
      * @param rate the new baud rate.
      */
@@ -242,7 +242,7 @@ public class SerialParameters {
     /**
      * Return the baud rate as <tt>int</tt>.
      * <p>
-     * Is guaranteed to return a value >=1
+     * Is guaranteed to return a value &ge;1
      *
      * @return the baud rate as <tt>int</tt>.
      */
