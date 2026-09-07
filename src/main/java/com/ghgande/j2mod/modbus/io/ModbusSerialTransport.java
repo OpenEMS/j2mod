@@ -126,7 +126,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         if (transmissionTimeNanos >= NS_IN_A_MS) {
             try {
                 final long adjustedDelay = (long) (transmissionTimeNanos * LONG_DELAY_FUDGE_FACTOR);
-                final long sleepMillis = adjustedDelay / NS_IN_A_MS;
+                final long sleepMillis = (long) (adjustedDelay / NS_IN_A_MS);
                 final int sleepNanos = (int) (adjustedDelay % NS_IN_A_MS);
 
                 Thread.sleep(sleepMillis, sleepNanos);
