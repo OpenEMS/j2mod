@@ -54,17 +54,35 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     static final int FRAME_END = 2000;
 
     /**
-     * The number of nanoseconds there is in a millisecond
+     * The number of nanoseconds in a millisecond
      */
-    private static final int NS_IN_A_MS = 1_000_000;
+    private static final double NS_IN_A_MS = 1_000_000.0;
 
     /**
-     * The number of nanoseconds there is in a second
+     * The number of microseconds in a second.
      */
-    private static final int NS_IN_A_SEC = 1_000_000_000;
+    private static final double MICROS_IN_A_SEC = 1_000_000.0;
+
+    /**
+     * The number of nanoseconds in a second
+     */
+    private static final double NS_IN_A_SEC = 1_000_000_000.0;
 
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
+
+
+    /**
+     * Minimum sleep duration in nanoseconds.
+     * Below this, only busy-waiting is accurate.
+     */
+    private static final long SLEEP_MIN_NS = 1_000_000L;
+
+    /**
+     * Safety buffer subtracted from sleep time
+     * so the thread wakes up early and finishes precision timing via busy-wait.
+     */
+    private static final long SLEEP_MARGIN_NS = 750_000L;
 
     /**
      * Historical calibration factors, for Transmission wait timing.
@@ -108,44 +126,39 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         writeMessage(msg);
     }
 
-    /**
-     * Waits for transmissionTimeNanos time period to elapse beginning from the startTime.
-     * This wait measurement is approximate, based on the OS clock and will depend on whether
-     * the OS uses a real-time clock (RTC). For sub-millisecond periods this method uses a
-     * tight loop to check against the OS clock which in of itself can be an expensive CPU call.
-     *
-     * @param startTime Time to start the period from
-     * @param transmissionTimeNanos Number of milliseconds to wait
-     */
-    private void waitForTransmission(long startTime, double transmissionTimeNanos) {
-        if (transmissionTimeNanos >= NS_IN_A_MS) {
-            try {
-                final long adjustedDelay = (long) (transmissionTimeNanos * LONG_DELAY_FUDGE_FACTOR);
-                final long sleepMillis = adjustedDelay / NS_IN_A_MS;
-                final int sleepNanos = (int) (adjustedDelay % NS_IN_A_MS);
-
-                Thread.sleep(sleepMillis, sleepNanos);
-            }
-            catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.debug("nothing to do. Sleep interrupted.", e);
-            }
+    private void waitForTransmission(double transmissionTimeNanos) {
+        if (transmissionTimeNanos <= 0) {
+            return;
         }
-        else if  (transmissionTimeNanos > 0) {
-            // For delays less than a millisecond, we need to chew CPU cycles unfortunately
-            // There are some fiddle factors here to allow for some oddities in the hardware
-            final int priority = Thread.currentThread().getPriority();
-            try {
-                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-                final long adjustedDelay = (long) (transmissionTimeNanos * SHORT_DELAY_FUDGE_FACTOR);
-                final long end = startTime + adjustedDelay;
-                while (System.nanoTime() < end) {
-                    // noop
+
+        final double fudgeFactor = (transmissionTimeNanos >= NS_IN_A_MS) //
+                ? LONG_DELAY_FUDGE_FACTOR //
+                : SHORT_DELAY_FUDGE_FACTOR;
+        final long targetEndNanos = System.nanoTime() + (long) (transmissionTimeNanos * fudgeFactor);
+
+        try {
+            long remainingNanos = targetEndNanos - System.nanoTime();
+            if (remainingNanos >= (SLEEP_MIN_NS + SLEEP_MARGIN_NS)) {
+                long sleepMillis = (long) ((remainingNanos - SLEEP_MARGIN_NS) / NS_IN_A_MS);
+                Thread.sleep(sleepMillis);
+            }
+            if (transmissionTimeNanos >= 5 * NS_IN_A_MS) {
+                // For long delays, allow the scheduler to run other threads
+                // before entering the final high-precision spin phase.
+                while ((targetEndNanos - System.nanoTime()) > 100_000L) {
+                    Thread.sleep(0);
                 }
             }
-            finally {
-                Thread.currentThread().setPriority(priority);
+            while (System.nanoTime() < targetEndNanos) {
+                // Pure busy wait
             }
+        }
+        catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            logger.debug("waitForTransmission interrupted. Ignoring.", e);
+        }
+        catch (RuntimeException ex) {
+            logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
         }
     }
 
@@ -160,12 +173,11 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         notifyListenersBeforeWrite(msg);
         try {
             writeMessageOut(msg);
-            final long startTime = System.nanoTime();
 
             // Wait here for the message to have been sent
             final double charactersPerSecond = commPort.getBaudRate() / commPort.getBitsPerCharacter();
-            final double transmissionTimeNanos = NS_IN_A_SEC * msg.getOutputLength() / charactersPerSecond;
-            waitForTransmission(startTime, transmissionTimeNanos);
+            final double transmissionTimeNanos = (msg.getOutputLength() / charactersPerSecond) * NS_IN_A_SEC;
+            waitForTransmission(transmissionTimeNanos);
         }
         finally {
             notifyListenersAfterWrite(msg);
