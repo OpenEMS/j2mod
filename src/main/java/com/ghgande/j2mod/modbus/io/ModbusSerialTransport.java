@@ -649,7 +649,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             int delay = getInterFrameDelay() / 1000;
 
             // How long since the last message we received
-            long gapSinceLastMessage = (System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS;
+            final long gapSinceLastMessage = (long) ((System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS);
             if (delay > gapSinceLastMessage) {
                 long sleepTime = delay - gapSinceLastMessage;
 
