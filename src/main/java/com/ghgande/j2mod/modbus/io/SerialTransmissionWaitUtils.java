@@ -29,7 +29,7 @@ class SerialTransmissionWaitUtils {
 	private static final Logger logger = LoggerFactory.getLogger(SerialTransmissionWaitUtils.class);
 
 	private static final String PROP_EXTRA_US = "j2mod.serial.tx.fudge.extra.us";
-	private static final String ENV_EXTRA_US  = "J2MOD_SERIAL_TX_FUDGE_EXTRA_US";
+	private static final String ENV_EXTRA_US = "J2MOD_SERIAL_TX_FUDGE_EXTRA_US";
 
 	/**
 	 * The number of nanoseconds in a millisecond
@@ -86,8 +86,8 @@ class SerialTransmissionWaitUtils {
 		long extraOffsetNs = TimeUnit.MICROSECONDS.toNanos(EXTRA_OFFSET_US);
 
 		WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS = 700_000L + extraOffsetNs;
-		WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS    = 800_000L + extraOffsetNs;
-		WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS    = 3_000_000L + extraOffsetNs;
+		WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS = 800_000L + extraOffsetNs;
+		WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS = 3_000_000L + extraOffsetNs;
 	}
 
 	/**
@@ -142,12 +142,10 @@ class SerialTransmissionWaitUtils {
 			while (System.nanoTime() < targetEndNanos) {
 				// Pure busy wait, for precision.
 			}
-		}
-		catch (InterruptedException e) {
+		} catch (InterruptedException e) {
 			Thread.currentThread().interrupt();
 			logger.debug("waitForTransmission interrupted.", e);
-		}
-		catch (RuntimeException ex) {
+		} catch (RuntimeException ex) {
 			logger.debug("waitForTransmission failed with exception.", ex);
 		}
 	}
