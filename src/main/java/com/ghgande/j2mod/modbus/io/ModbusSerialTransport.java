@@ -30,6 +30,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.LockSupport;
 
 /**
  * Abstract base class for serial <tt>ModbusTransport</tt>
@@ -76,7 +77,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
      * Minimum sleep duration in nanoseconds.
      * Below this, only busy-waiting is accurate.
      */
-    private static final long SLEEP_MIN_NS = 1_000_000L;
+    private static final long SLEEP_MIN_NS = 3_000_000L;
 
     /**
      * Safety buffer subtracted from sleep time
@@ -126,31 +127,28 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         writeMessage(msg);
     }
 
+    @SuppressWarnings("StatementWithEmptyBody")
     private void waitForTransmission(double transmissionTimeNanos) {
         if (transmissionTimeNanos <= 0) {
             return;
         }
 
-        final double fudgeFactor = (transmissionTimeNanos >= NS_IN_A_MS) //
-                ? LONG_DELAY_FUDGE_FACTOR //
-                : SHORT_DELAY_FUDGE_FACTOR;
-        final long targetEndNanos = System.nanoTime() + (long) (transmissionTimeNanos * fudgeFactor);
+        final long fudgedWaitTimeNs = calcFudgedWaitTimeNs(transmissionTimeNanos);
+        final long targetEndNanos = System.nanoTime() + fudgedWaitTimeNs;
 
         try {
             long remainingNanos = targetEndNanos - System.nanoTime();
             if (remainingNanos >= (SLEEP_MIN_NS + SLEEP_MARGIN_NS)) {
-                long sleepMillis = (long) ((remainingNanos - SLEEP_MARGIN_NS) / NS_IN_A_MS);
+                final long sleepMargin = fudgedWaitTimeNs > LONG_SHORT_WAIT_THRESHOLD_NS ? 0 : SLEEP_MARGIN_NS;
+                long sleepMillis = (long) ((remainingNanos - sleepMargin) / NS_IN_A_MS);
                 Thread.sleep(sleepMillis);
             }
-            if (transmissionTimeNanos >= 5 * NS_IN_A_MS) {
-                // For long delays, allow the scheduler to run other threads
-                // before entering the final high-precision spin phase.
-                while ((targetEndNanos - System.nanoTime()) > 100_000L) {
-                    Thread.sleep(0);
-                }
+            remainingNanos = targetEndNanos - System.nanoTime();
+            if (remainingNanos > PARK_THRESHOLD_NS * 2) {
+                LockSupport.parkNanos(remainingNanos - PARK_THRESHOLD_NS);
             }
             while (System.nanoTime() < targetEndNanos) {
-                // Pure busy wait
+                // Pure busy wait, for precision.
             }
         }
         catch (InterruptedException e) {
