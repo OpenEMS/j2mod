@@ -83,7 +83,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
      * Safety buffer subtracted from sleep time
      * so the thread wakes up early and finishes precision timing via LockSupport.parkNanos() or busy-waiting.
      */
-    private static final long SLEEP_MARGIN_NS = 750_000L;
+    private static final long SLEEP_MARGIN_NS = 800_000L;
 
 	/**
 	 * Threshold for using LockSupport.parkNanos() instead of busy-waiting.
@@ -93,9 +93,9 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
 
     private static final long LONG_SHORT_WAIT_THRESHOLD_NS = 5_000_000L;
 
-	private static final long WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS = 600_000L;
-    private static final long WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS = 700_000L;
-    private static final long WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS = 2_700_000L;
+	private static final long WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS = 700_000L;
+    private static final long WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS = 800_000L;
+    private static final long WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS = 3_000_000L;
 	private static final double WAIT_FOR_TRANSMISSION_FUDGE_FACTOR = 0.22;
 	private static final double WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT = 0.96;
 
@@ -181,10 +181,10 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         }
         catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            logger.debug("waitForTransmission interrupted. Ignoring.", e);
+            logger.debug("waitForTransmission interrupted.", e);
         }
         catch (RuntimeException ex) {
-            logger.debug("waitForTransmission failed with exception. Ignoring.", ex);
+            logger.debug("waitForTransmission failed with exception.", ex);
         }
     }
 
