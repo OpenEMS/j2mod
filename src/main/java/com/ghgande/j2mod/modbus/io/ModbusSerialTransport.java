@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.concurrent.locks.LockSupport;
 
 /**
  * Abstract base class for serial <tt>ModbusTransport</tt>
@@ -72,53 +71,6 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
 
-
-    /**
-     * Minimum sleep duration in nanoseconds.
-     * Below this, only busy-waiting is accurate.
-     */
-    private static final long SLEEP_MIN_NS = 3_000_000L;
-
-    /**
-     * Safety buffer subtracted from sleep time
-     * so the thread wakes up early and finishes precision timing via LockSupport.parkNanos() or busy-waiting.
-     */
-    private static final long SLEEP_MARGIN_NS = 800_000L;
-
-	/**
-	 * Threshold for using LockSupport.parkNanos() instead of busy-waiting.
-	 * Below this, busy-waiting is more accurate.
-	 */
-	private static final long PARK_THRESHOLD_NS = 50_000L;
-
-    private static final long LONG_SHORT_WAIT_THRESHOLD_NS = 5_000_000L;
-
-	private static final long WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS = 700_000L;
-    private static final long WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS = 800_000L;
-    private static final long WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS = 3_000_000L;
-	private static final double WAIT_FOR_TRANSMISSION_FUDGE_FACTOR = 0.22;
-	private static final double WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT = 0.96;
-
-	/**
-	 * Calculates a realistic wait time threshold (in nanoseconds) by adding an empirical
-	 * overhead ("fudge factor") to the theoretical transmission duration.
-	 * <p>
-     * Standard baud-rate calculations account mainly for wire time and can miss OS scheduling,
-     * USB/driver latency, and adapter switching delays. This non-linear power-law model was
-     * empirically tuned from logic-analyzer measurements on constrained Linux hardware
-     * (BeagleBone Black, USB-to-RS485) across many runs and baud rates.
-	 *
-	 * @param theoreticalTransmissionTimeNs The baseline calculated transmission time in nanoseconds.
-	 * @return recommended total wait time in nanoseconds; conservative for tested edge-device conditions
-	 */
-	private static long calcFudgedWaitTimeNs(double theoreticalTransmissionTimeNs) {
-            final double fudgeCalc = WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS //
-                    + WAIT_FOR_TRANSMISSION_FUDGE_FACTOR //
-                    * Math.pow(theoreticalTransmissionTimeNs, WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT);
-            final double fudgeValue = Math.max(WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS, Math.min(fudgeCalc, WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS));
-		return Math.round(theoreticalTransmissionTimeNs + fudgeValue);
-	}
-
     private AbstractSerialConnection commPort;
     boolean echo = false;     // require RS-485 echo processing
     private final Set<AbstractSerialTransportListener> listeners = Collections.synchronizedSet(new HashSet<AbstractSerialTransportListener>());
@@ -155,39 +107,6 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         writeMessage(msg);
     }
 
-    @SuppressWarnings("StatementWithEmptyBody")
-    private void waitForTransmission(double transmissionTimeNanos) {
-        if (transmissionTimeNanos <= 0) {
-            return;
-        }
-
-        final long fudgedWaitTimeNs = calcFudgedWaitTimeNs(transmissionTimeNanos);
-        final long targetEndNanos = System.nanoTime() + fudgedWaitTimeNs;
-
-        try {
-            long remainingNanos = targetEndNanos - System.nanoTime();
-            if (remainingNanos >= (SLEEP_MIN_NS + SLEEP_MARGIN_NS)) {
-                final long sleepMargin = fudgedWaitTimeNs > LONG_SHORT_WAIT_THRESHOLD_NS ? 0 : SLEEP_MARGIN_NS;
-                long sleepMillis = (long) ((remainingNanos - sleepMargin) / NS_IN_A_MS);
-                Thread.sleep(sleepMillis);
-            }
-            remainingNanos = targetEndNanos - System.nanoTime();
-            if (remainingNanos > PARK_THRESHOLD_NS * 2) {
-                LockSupport.parkNanos(remainingNanos - PARK_THRESHOLD_NS);
-            }
-            while (System.nanoTime() < targetEndNanos) {
-                // Pure busy wait, for precision.
-            }
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            logger.debug("waitForTransmission interrupted.", e);
-        }
-        catch (RuntimeException ex) {
-            logger.debug("waitForTransmission failed with exception.", ex);
-        }
-    }
-
     /**
      * Writes the request/response message to the port
      *
@@ -203,7 +122,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             // Wait here for the message to have been sent
             final double charactersPerSecond = commPort.getBaudRate() / commPort.getBitsPerCharacter();
             final double transmissionTimeNanos = (msg.getOutputLength() / charactersPerSecond) * NS_IN_A_SEC;
-            waitForTransmission(transmissionTimeNanos);
+            SerialTransmissionWaitUtils.waitForTransmission(transmissionTimeNanos);
         }
         finally {
             notifyListenersAfterWrite(msg);
