@@ -81,15 +81,43 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
 
     /**
      * Safety buffer subtracted from sleep time
-     * so the thread wakes up early and finishes precision timing via busy-wait.
+     * so the thread wakes up early and finishes precision timing via LockSupport.parkNanos() or busy-waiting.
      */
     private static final long SLEEP_MARGIN_NS = 750_000L;
 
-    /**
-     * Historical calibration factors, for Transmission wait timing.
-     */
-    private static final double LONG_DELAY_FUDGE_FACTOR = 1.7;
-    private static final double SHORT_DELAY_FUDGE_FACTOR = 1.3;
+	/**
+	 * Threshold for using LockSupport.parkNanos() instead of busy-waiting.
+	 * Below this, busy-waiting is more accurate.
+	 */
+	private static final long PARK_THRESHOLD_NS = 50_000L;
+
+    private static final long LONG_SHORT_WAIT_THRESHOLD_NS = 5_000_000L;
+
+	private static final long WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS = 600_000L;
+    private static final long WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS = 700_000L;
+    private static final long WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS = 2_700_000L;
+	private static final double WAIT_FOR_TRANSMISSION_FUDGE_FACTOR = 0.22;
+	private static final double WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT = 0.96;
+
+	/**
+	 * Calculates a realistic wait time threshold (in nanoseconds) by adding an empirical
+	 * overhead ("fudge factor") to the theoretical transmission duration.
+	 * <p>
+     * Standard baud-rate calculations account mainly for wire time and can miss OS scheduling,
+     * USB/driver latency, and adapter switching delays. This non-linear power-law model was
+     * empirically tuned from logic-analyzer measurements on constrained Linux hardware
+     * (BeagleBone Black, USB-to-RS485) across many runs and baud rates.
+	 *
+	 * @param theoreticalTransmissionTimeNs The baseline calculated transmission time in nanoseconds.
+	 * @return recommended total wait time in nanoseconds; conservative for tested edge-device conditions
+	 */
+	private static long calcFudgedWaitTimeNs(double theoreticalTransmissionTimeNs) {
+            final double fudgeCalc = WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS //
+                    + WAIT_FOR_TRANSMISSION_FUDGE_FACTOR //
+                    * Math.pow(theoreticalTransmissionTimeNs, WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT);
+            final double fudgeValue = Math.max(WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS, Math.min(fudgeCalc, WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS));
+		return Math.round(theoreticalTransmissionTimeNs + fudgeValue);
+	}
 
     private AbstractSerialConnection commPort;
     boolean echo = false;     // require RS-485 echo processing
