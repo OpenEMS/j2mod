@@ -636,10 +636,10 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             ModbusUtil.sleep(transDelayMS);
         }
         else {
-            // Make use we have a gap of 3.5 characters between adjacent requests
+            // Make sure we have a gap of 3.5 characters between adjacent requests
             // We have to do the calculations here because it is possible that the caller may have changed
             // the connection characteristics if they provided the connection instance
-            int delay = getInterFrameDelay() / 1000;
+            int delay = (int) Math.ceil(getInterFrameDelay() / 1000.0);
 
             // How long since the last message we received
             final long gapSinceLastMessage = (long) ((System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS);
@@ -706,7 +706,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         // We have to do the calculations here because it is possible that the caller may have changed
         // the connection characteristics if they provided the connection instance
         final double microsPerChar = (commPort.getBitsPerCharacter() / (double) commPort.getBaudRate()) * MICROS_IN_A_SEC;
-        return (long) (microsPerChar * chars);
+        return (long) Math.ceil(microsPerChar * chars);
     }
 
     /**
@@ -714,7 +714,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
      * This method will repeatedly poll the available bytes, so it should not have any side effects.
      *
      * @param waitTimeMicroSec The time to wait for the condition to be true in microseconds
-     * @return true if the condition ended the spin, false if the tim
+     * @return true if the condition ended the spin, false if the timeout was reached
      */
     boolean spinUntilBytesAvailable(long waitTimeMicroSec) {
         long start = System.nanoTime();
