@@ -55,11 +55,12 @@ class SerialTransmissionWaitUtils {
 
 	private static final long LONG_SHORT_WAIT_THRESHOLD_NS = 5_000_000L;
 
-	private static final long WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS;
-	private static final long WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS;
-	private static final long WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS;
 	private static final double WAIT_FOR_TRANSMISSION_FUDGE_FACTOR = 0.22;
 	private static final double WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT = 0.96;
+	private static final long WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS;
+
+	public static final long WAIT_FOR_TRANSMISSION_MIN_FUDGE_NS;
+	public static final long WAIT_FOR_TRANSMISSION_MAX_FUDGE_NS;
 
 	/**
 	 * Calculates a realistic wait time threshold (in nanoseconds) by adding an empirical
@@ -72,8 +73,12 @@ class SerialTransmissionWaitUtils {
 	 *
 	 * @param theoreticalTransmissionTimeNs The baseline calculated transmission time in nanoseconds.
 	 * @return recommended total wait time in nanoseconds; conservative for tested edge-device conditions
+	 * @throws IllegalArgumentException if the theoretical transmission time is negative
 	 */
-	private static long calcFudgedWaitTimeNs(double theoreticalTransmissionTimeNs) {
+	static long calcFudgedWaitTimeNs(double theoreticalTransmissionTimeNs) {
+		if (theoreticalTransmissionTimeNs < 0) {
+			throw new IllegalArgumentException("Theoretical transmission time must be non-negative.");
+		}
 		final double fudgeCalc = WAIT_FOR_TRANSMISSION_FUDGE_MARGIN_NS //
 				+ WAIT_FOR_TRANSMISSION_FUDGE_FACTOR //
 				* Math.pow(theoreticalTransmissionTimeNs, WAIT_FOR_TRANSMISSION_FUDGE_EXPONENT);
