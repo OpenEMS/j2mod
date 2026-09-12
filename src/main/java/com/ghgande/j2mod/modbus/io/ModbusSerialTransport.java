@@ -588,10 +588,10 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             ModbusUtil.sleep(transDelayMS);
         }
         else {
-            // Make use we have a gap of 3.5 characters between adjacent requests
+            // Make sure we have a gap of 3.5 characters between adjacent requests
             // We have to do the calculations here because it is possible that the caller may have changed
             // the connection characteristics if they provided the connection instance
-            int delay = getInterFrameDelay() / 1000;
+            int delay = (int) Math.ceil(getInterFrameDelay() / 1000.0);
 
             // How long since the last message we received
             final long gapSinceLastMessage = (long) ((System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS);
@@ -608,9 +608,14 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     }
 
     /**
-     * In microseconds
+     * Calculates the inter-frame delay according to the
+     * MODBUS over Serial Line Specification V1.02.
+     * <ul>
+     *  <li> baud rates &le; 19200: 3.5 Character time </li>
+     *  <li> baud rates &gt; 19200: 1750 microseconds </li>
+     * </ul>
      *
-     * @return Delay between frames
+     * @return the inter-frame delay in microseconds
      */
     int getInterFrameDelay() {
         if (commPort.getBaudRate() > 19200) {
@@ -618,18 +623,23 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         }
         else {
             long delay = Math.max(getCharIntervalMicro(Modbus.INTER_MESSAGE_GAP), Modbus.MINIMUM_TRANSMIT_DELAY * 1000L);
-            return delay > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) delay;
+            return (int) Math.min(Integer.MAX_VALUE, delay);
         }
     }
 
     /**
-     * The maximum delay between characters in microseconds
+     * Calculates the inter-character time-out according to the
+     * MODBUS over Serial Line Specification V1.02.
+     * <ul>
+     *  <li> baud rates &le; 19200: 1.5 Character time </li>
+     *  <li> baud rates &gt; 19200: 750 microseconds </li>
+     * </ul>
      *
-     * @return microseconds
+     * @return the inter-character time-out in microseconds
      */
-    long getMaxCharDelay() {
+    long getMaxCharTimeout() {
         if (commPort.getBaudRate() > 19200) {
-            return 1750;
+            return 750;
         }
         else {
             return getCharIntervalMicro(Modbus.INTER_CHARACTER_GAP);
@@ -647,7 +657,8 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         // Make use we have a gap of 3.5 characters between adjacent requests
         // We have to do the calculations here because it is possible that the caller may have changed
         // the connection characteristics if they provided the connection instance
-        return (long) (chars * NS_IN_A_MS * commPort.getBitsPerCharacter() / commPort.getBaudRate());
+        final double microsPerChar = (commPort.getBitsPerCharacter() / (double) commPort.getBaudRate()) * MICROS_IN_A_SEC;
+        return (long) Math.ceil(microsPerChar * chars);
     }
 
     /**
@@ -655,7 +666,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
      * This method will repeatedly poll the available bytes, so it should not have any side effects.
      *
      * @param waitTimeMicroSec The time to wait for the condition to be true in microseconds
-     * @return true if the condition ended the spin, false if the tim
+     * @return true if the condition ended the spin, false if the timeout was reached
      */
     boolean spinUntilBytesAvailable(long waitTimeMicroSec) {
         long start = System.nanoTime();
