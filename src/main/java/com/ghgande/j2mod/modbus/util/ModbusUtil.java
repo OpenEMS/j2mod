@@ -95,6 +95,8 @@ public class ModbusUtil {
             0x43, 0x83, 0x41, 0x81, 0x80, 0x40
     };
 
+    private static final char[] HEX_DIGITS = "0123456789ABCDEF".toCharArray();
+
     /**
      * Prevent instantiation
      */
@@ -147,21 +149,24 @@ public class ModbusUtil {
      */
     public static String toHex(byte[] data, int off, int end) {
         //double size, two bytes (hex range) for one byte
-        StringBuilder buf = new StringBuilder(data.length * 2);
         if (end > data.length) {
             end = data.length;
         }
+
+        final int length = Math.max(0, (end - off) * 3 - 1);
+        final StringBuilder buffer = new StringBuilder(length);
+
         for (int i = off; i < end; i++) {
-            //don't forget the second hex digit
-            if (((int)data[i] & 0xff) < 0x10) {
-                buf.append("0");
-            }
-            buf.append(Long.toString((int)data[i] & 0xff, 16).toUpperCase());
-            if (i < end - 1) {
-                buf.append(" ");
+            final int value = data[i] & 0xFF;
+            buffer.append(HEX_DIGITS[value >>> 4]);
+            buffer.append(HEX_DIGITS[value & 0x0F]);
+
+            if (i + 1 < end) {
+                buffer.append(' ');
             }
         }
-        return buf.toString();
+
+        return buffer.toString();
     }
 
     /**
@@ -173,19 +178,11 @@ public class ModbusUtil {
      * @return the generated hexadecimal representation as <code>byte[]</code>.
      */
     public static byte[] toHex(int i) {
-        StringBuilder buf = new StringBuilder(2);
-        //don't forget the second hex digit
-        if ((i & 0xff) < 0x10) {
-            buf.append("0");
-        }
-        buf.append(Long.toString(i & 0xff, 16).toUpperCase());
-        try {
-            return buf.toString().getBytes("US-ASCII");
-        }
-        catch (Exception e) {
-            logger.debug("Problem converting bytes to string - {}", e.getMessage());
-        }
-        return null;
+        final int unsignedByte = i & 0xFF;
+        return new byte[] {
+                (byte) HEX_DIGITS[unsignedByte >>> 4],
+                (byte) HEX_DIGITS[unsignedByte & 0x0F]
+        };
     }
 
     /**
@@ -480,7 +477,7 @@ public class ModbusUtil {
         int[] crc = {0xFF, 0xFF};
         int nextByte;
         int uIndex; /* will index into CRC lookup*/ /* table */
-    /* pass through message buffer */
+        /* pass through message buffer */
         for (int i = offset; i < len && i < data.length; i++) {
             nextByte = 0xFF & ((int)data[i]);
             uIndex = crc[0] ^ nextByte; //*puchMsg++; /* calculate the CRC */
@@ -534,5 +531,5 @@ public class ModbusUtil {
             logger.warn("Backout sleep timer has been interrupted");
         }
     }
-    
+
 }
