@@ -165,6 +165,7 @@ public class ModbusSlaveFactory {
      * Creates a serial modbus slave or returns the one already allocated to this port
      *
      * @param serialParams Serial parameters for serial type slaves
+     * @param listenerFactory Factory to create the listener for this slave
      * @return new or existing Serial modbus slave associated with the port
      * @throws ModbusException If a problem occurs e.g. port already in use
      */
