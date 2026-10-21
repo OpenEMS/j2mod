@@ -56,12 +56,12 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
     /**
      * The number of nanoseconds there is in a millisecond
      */
-    private static final int NS_IN_A_MS = 1_000_000;
+    private static final double NS_IN_A_MS = 1_000_000.0;
 
     /**
      * The number of nanoseconds there is in a second
      */
-    private static final double NS_IN_A_SEC = 1_000_000_000D;
+    private static final double NS_IN_A_SEC = 1_000_000_000.0;
 
     private static final String CANNOT_READ_FROM_SERIAL_PORT = "Cannot read from serial port";
     private static final String COMM_PORT_IS_NOT_VALID_OR_NOT_OPEN = "Comm port is not valid or not open";
@@ -121,7 +121,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
         if (transmissionTimeNanos >= NS_IN_A_MS) {
             try {
                 final long adjustedDelay = (long) (transmissionTimeNanos * LONG_DELAY_FUDGE_FACTOR);
-                final long sleepMillis = adjustedDelay / NS_IN_A_MS;
+                final long sleepMillis = (long) (adjustedDelay / NS_IN_A_MS);
                 final int sleepNanos = (int) (adjustedDelay % NS_IN_A_MS);
 
                 Thread.sleep(sleepMillis, sleepNanos);
@@ -637,7 +637,7 @@ public abstract class ModbusSerialTransport extends AbstractModbusTransport {
             int delay = getInterFrameDelay() / 1000;
 
             // How long since the last message we received
-            long gapSinceLastMessage = (System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS;
+            long gapSinceLastMessage = (long) ((System.nanoTime() - lastTransactionTimestamp) / NS_IN_A_MS);
             if (delay > gapSinceLastMessage) {
                 long sleepTime = delay - gapSinceLastMessage;
 
